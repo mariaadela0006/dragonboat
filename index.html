@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dragon Boat Race</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        /* Attempt to load the requested font if installed locally, otherwise use classroom-friendly fallbacks */
+        @font-face {
+            font-family: 'Comic Sans MS';
+            src: local('Comic Sans MS');
+        }
+        
+        .kg-font {
+            font-family: 'Comic Sans MS', 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, sans-serif;
+        }
+
+        body {
+            user-select: none;
+            overflow: hidden; /* Prevent scrolling for a clean app feel */
+            background-color: #1a202c; /* Dark backdrop */
+        }
+
+        /* Screen containers */
+        .screen {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* Backgrounds with fallbacks */
+        #home-screen {
+            background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('dragonboatf.png') center/cover no-repeat, linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        #race-screen {
+            background: linear-gradient(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.3)), url('game.gif') center/cover no-repeat, linear-gradient(to bottom, #87CEEB 0%, #1E90FF 100%);
+        }
+
+        /* Animations */
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .animate-pop {
+            animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .boat-container {
+            transition: left 0.4s ease-in-out;
+        }
+
+        .letter-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .letter-card:hover {
+            transform: scale(1.08) translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Roulette Spinner Animation */
+        .spinner-container {
+            overflow: hidden;
+            height: 100px;
+            position: relative;
+            background: white;
+            border-radius: 1rem;
+            border: 6px solid #fbd38d;
+            box-shadow: inset 0px 6px 8px rgba(0,0,0,0.15);
+        }
+        
+        .spinner-strip {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            transition: transform 2.5s cubic-bezier(0.2, 1, 0.4, 1);
+        }
+
+        .spinner-item {
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div id="home-screen" class="screen active flex-col items-center justify-center relative">
+        <button onclick="toggleFullScreen()" class="absolute top-6 right-6 bg-white/20 hover:bg-white/40 text-white p-5 rounded-full backdrop-blur-sm transition-all shadow-lg text-2xl z-50">
+            <i class="fas fa-expand"></i>
+        </button>
+        
+        <div class="text-center bg-white/95 p-12 md:p-16 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] border-8 border-yellow-400 animate-pop max-w-6xl w-full mx-4">
+            
+            <!-- Team Selection Container -->
+            <div class="mb-12 bg-slate-100 p-6 rounded-2xl border-4 border-blue-400 max-w-2xl mx-auto">
+                <p class="text-3xl font-extrabold text-slate-700 mb-4 uppercase tracking-wide">Select Number of Teams</p>
+                <div class="flex justify-center gap-3">
+                    <button onclick="setTeamCount(2)" id="btn-team-2" class="team-count-btn px-6 py-3 font-bold text-2xl rounded-xl border-4 border-slate-400 bg-white text-slate-700 transition-all">2</button>
+                    <button onclick="setTeamCount(3)" id="btn-team-3" class="team-count-btn px-6 py-3 font-bold text-2xl rounded-xl border-4 border-slate-400 bg-white text-slate-700 transition-all">3</button>
+                    <button onclick="setTeamCount(4)" id="btn-team-4" class="team-count-btn px-6 py-3 font-bold text-2xl rounded-xl border-4 border-slate-400 bg-white text-slate-700 transition-all">4</button>
+                    <button onclick="setTeamCount(5)" id="btn-team-5" class="team-count-btn px-6 py-3 font-bold text-2xl rounded-xl border-4 border-blue-500 bg-blue-500 text-white shadow-md transition-all">5</button>
+                    <button onclick="setTeamCount(6)" id="btn-team-6" class="team-count-btn px-6 py-3 font-bold text-2xl rounded-xl border-4 border-slate-400 bg-white text-slate-700 transition-all">6</button>
+                </div>
+            </div>
+            
+            <!-- Two massive mode buttons -->
+            <div class="flex flex-col md:flex-row gap-8 justify-center w-full">
+                <button onclick="startGame('easy')" class="group relative px-8 py-8 font-extrabold text-4xl md:text-5xl rounded-[2.5rem] text-white bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-[0_12px_0_rgb(21,128,61)] hover:shadow-[0_6px_0_rgb(21,128,61)] hover:translate-y-1 transition-all flex-1">
+                    <i class="fas fa-seedling mb-3 text-7xl group-hover:scale-110 transition-transform block drop-shadow-md"></i>
+                    EASY MODE
+                    <div class="text-2xl mt-4 font-bold text-green-100 uppercase tracking-wider drop-shadow-sm">Click Boat to Move</div>
+                </button>
+                
+                <button onclick="startGame('challenging')" class="group relative px-8 py-8 font-extrabold text-4xl md:text-5xl rounded-[2.5rem] text-white bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 shadow-[0_12px_0_rgb(185,28,28)] hover:shadow-[0_6px_0_rgb(185,28,28)] hover:translate-y-1 transition-all flex-1">
+                    <i class="fas fa-fire mb-3 text-7xl group-hover:scale-110 transition-transform block drop-shadow-md"></i>
+                    CHALLENGING
+                    <div class="text-2xl mt-4 font-bold text-red-100 uppercase tracking-wider drop-shadow-sm">Spinner & Penalties</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="letters-screen" class="screen flex-col bg-slate-50 relative p-6">
+        <div class="flex justify-between items-center mb-4 shrink-0 px-4">
+            <h2 class="text-4xl font-extrabold text-slate-700 bg-white px-8 py-3 rounded-full shadow-md border-4 border-slate-200 flex items-center">
+                <i class="fas fa-image text-blue-600 mr-4 text-5xl"></i> Picture Activity
+            </h2>
+            <div class="text-3xl font-extrabold text-slate-600 bg-white px-8 py-3 rounded-full shadow-md border-4 border-blue-200">
+                Round <span id="round-counter" class="text-blue-600">1</span> 
+                <span class="mx-3 text-slate-300">|</span> 
+                Set <span id="set-counter" class="text-orange-500">1</span>
+            </div>
+        </div>
+
+        <!-- Dynamic container for Picture + Multiple Choice questions -->
+        <div id="letters-container" class="flex-1 flex flex-col items-center justify-center gap-4 overflow-hidden w-full max-w-[95vw] mx-auto content-center">
+            <!-- Content injected here via JS -->
+        </div>
+
+        <div class="mt-4 flex justify-center shrink-0">
+            <button onclick="goToRace()" class="px-16 py-6 font-extrabold text-4xl rounded-full text-white bg-green-500 hover:bg-green-600 shadow-[0_10px_0_rgb(21,128,61)] hover:shadow-[0_5px_0_rgb(21,128,61)] hover:translate-y-1 transition-all">
+                <i class="fas fa-check-circle mr-3"></i> DONE
+            </button>
+        </div>
+    </div>
+
+    <div id="race-screen" class="screen flex-col relative">
+        
+        <!-- Top Placement Buttons -->
+        <div class="bg-white/95 backdrop-blur-md p-5 shadow-xl flex justify-center items-center gap-4 shrink-0 z-40 border-b-8 border-blue-500">
+            
+            <!-- Dynamic placement buttons row based on selected team size -->
+            <div id="placement-buttons" class="flex gap-4">
+                <!-- Injected dynamically via JS based on selected teams -->
+            </div>
+            
+            <div class="flex-1"></div>
+            
+            <button onclick="endGame()" class="px-8 py-4 font-extrabold text-2xl rounded-2xl text-white bg-red-600 hover:bg-red-700 shadow-[0_8px_0_rgb(153,27,27)] hover:shadow-[0_4px_0_rgb(153,27,27)] hover:translate-y-1 transition-all flex items-center mr-2">
+                <i class="fas fa-stop mr-3 text-3xl"></i> END
+            </button>
+
+            <button id="next-set-btn" onclick="advanceChallenge()" class="px-8 py-4 font-extrabold text-2xl rounded-2xl text-white bg-purple-600 hover:bg-purple-700 shadow-[0_8px_0_rgb(107,33,168)] hover:shadow-[0_4px_0_rgb(107,33,168)] hover:translate-y-1 transition-all flex items-center">
+                Next Set <i class="fas fa-arrow-right ml-3 text-3xl"></i>
+            </button>
+        </div>
+
+        <!-- Race Tracks -->
+        <div class="flex-1 flex flex-col justify-around py-4 px-2 gap-2 overflow-hidden z-10" id="tracks-container">
+            <!-- Tracks injected via JS -->
+        </div>
+    </div>
+
+    <!-- Roulette Modal -->
+    <div id="roulette-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-white rounded-[2rem] p-10 max-w-2xl w-full shadow-2xl animate-pop text-center border-[12px] border-blue-500">
+            <h3 id="roulette-title" class="text-5xl font-extrabold mb-8 text-blue-700 uppercase tracking-widest drop-shadow-sm">1st Place Spinner</h3>
+            
+            <div class="spinner-container mb-8 mx-auto w-64 h-[100px]">
+                <div id="spinner-strip" class="spinner-strip">
+                    <!-- Numbers injected via JS -->
+                </div>
+            </div>
+
+            <div id="roulette-controls">
+                <button onclick="startSpin()" class="px-14 py-6 font-extrabold text-4xl rounded-full text-white bg-red-500 hover:bg-red-600 shadow-[0_8px_0_rgb(185,28,28)] transition-all hover:translate-y-1 hover:shadow-[0_4px_0_rgb(185,28,28)]">
+                    SPIN!
+                </button>
+            </div>
+
+            <div id="team-selector" class="hidden mt-8">
+                <p class="text-3xl font-extrabold mb-6 text-slate-800">Apply to which team?</p>
+                <div class="flex flex-wrap justify-center gap-4">
+                    <!-- Team buttons injected via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Winner Modal -->
+    <div id="winner-modal" class="hidden fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-lg">
+        <div class="bg-gradient-to-b from-yellow-200 to-yellow-400 rounded-[3rem] p-14 max-w-4xl w-full shadow-[0_0_80px_rgba(250,204,21,0.8)] animate-pop text-center border-[12px] border-yellow-600">
+            <i class="fas fa-crown text-yellow-600 text-[10rem] mb-6 drop-shadow-2xl"></i>
+            <h2 id="winner-text" class="text-[5rem] leading-none font-extrabold mb-6 text-red-700 drop-shadow-lg uppercase tracking-tight">TEAM 1 WINS!</h2>
+            <p class="text-4xl text-red-900 mb-10 font-bold">They reached 30 steps!</p>
+            <div class="flex justify-center gap-6">
+                <button onclick="resetGame()" class="px-12 py-6 font-extrabold text-3xl rounded-2xl text-white bg-blue-600 hover:bg-blue-700 shadow-[0_10px_0_rgb(29,78,216)] transition-all hover:translate-y-1 hover:shadow-[0_5px_0_rgb(29,78,216)]">
+                    <i class="fas fa-redo mr-3"></i> Play Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Final Rankings Modal -->
+    <div id="ranking-modal" class="hidden fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-lg">
+        <div class="bg-gradient-to-b from-blue-100 to-blue-300 rounded-[3rem] p-10 max-w-4xl w-full shadow-[0_0_80px_rgba(59,130,246,0.6)] animate-pop text-center border-[12px] border-blue-600 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-[4rem] leading-none font-extrabold mb-8 text-blue-900 drop-shadow-md uppercase tracking-widest">Final Rankings</h2>
+            
+            <div id="ranking-container" class="flex flex-col gap-4 mb-10">
+                <!-- Rankings injected via JS -->
+            </div>
+            
+            <div class="flex justify-center gap-6">
+                <button onclick="resetGame()" class="px-12 py-6 font-extrabold text-3xl rounded-2xl text-white bg-green-600 hover:bg-green-700 shadow-[0_10px_0_rgb(22,101,52)] transition-all hover:translate-y-1 hover:shadow-[0_5px_0_rgb(22,101,52)]">
+                    <i class="fas fa-redo mr-3"></i> Play Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let currentRound = 1; // 1 to 6
+        let currentSet = 1;   // 1 to 5
+        let gameMode = 'challenging';
+        let activeTeamCount = 5; // Track current user choice (default 5)
+        
+        const MAX_STEPS = 30;
+
+        // Master Pool of Teams (Up to 6 teams)
+        const MASTER_TEAMS = [
+            { id: 1, name: "Team 1", img: "2.png", color: "#ef4444", score: 0 },
+            { id: 2, name: "Team 2", img: "3.png", color: "#3b82f6", score: 0 },
+            { id: 3, name: "Team 3", img: "4.png", color: "#10b981", score: 0 },
+            { id: 4, name: "Team 4", img: "5.png", color: "#f59e0b", score: 0 },
+            { id: 5, name: "Team 5", img: "6.png", color: "#8b5cf6", score: 0 },
+            { id: 6, name: "Team 6", img: "7.png", color: "#ec4899", score: 0 }
+        ];
+
+        // Active teams used in current session
+        let teams = [];
+
+        // Question pool mapping images to lowercase answers
+        const PICTURE_ACTIVITY_POOL = [
+            { img: "wearsachet1.png", ans: "wear sachets" },
+            { img: "wearsachet2.png", ans: "wear sachets" },
+            { img: "wearsachet3.png", ans: "wear sachets" },
+            { img: "eatrc1.png", ans: "eat rice dumplings" },
+            { img: "eatrc2.png", ans: "eat rice dumplings" },
+            { img: "eatrc3.png", ans: "eat rice dumplings" },
+            { img: "stand1.png", ans: "stand an egg" },
+            { img: "stand2.png", ans: "stand an egg" },
+            { img: "stand3.png", ans: "stand an egg" },
+            { img: "watch1.png", ans: "watch a race" },
+            { img: "watch2.png", ans: "watch a race" },
+            { img: "watch3.png", ans: "watch a race" }
+        ];
+        
+        let shuffledQuestions = [];
+        let currentQuestionIndex = 0;
+
+        // Roulette Rules
+        const rouletteRules = {
+            '1st': [1, 2, 3],
+            '2nd': [-1, 1, 2],
+            '3rd': [-1, 1, 1],
+            '4th': [-1, -1, 1],
+            '5th': [-2, -1, 1],
+            '6th': [-2, -1, 1]
+        };
+
+        let currentRouletteOptions = [];
+        let selectedSpinResult = 0;
+        let isSpinning = false;
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function setTeamCount(count) {
+            activeTeamCount = count;
+            document.querySelectorAll('.team-count-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-500', 'text-white', 'border-blue-500', 'shadow-md');
+                btn.classList.add('bg-white', 'text-slate-700', 'border-slate-400');
+            });
+            const activeBtn = document.getElementById(`btn-team-${count}`);
+            activeBtn.classList.remove('bg-white', 'text-slate-700', 'border-slate-400');
+            activeBtn.classList.add('bg-blue-500', 'text-white', 'border-blue-500', 'shadow-md');
+        }
+
+        function setupPlacementButtons() {
+            const container = document.getElementById('placement-buttons');
+            container.innerHTML = '';
+            
+            const placementLabels = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
+            const buttonStyles = [
+                'bg-yellow-500 hover:bg-yellow-600 shadow-[0_8px_0_rgb(161,98,7)] text-white',
+                'bg-slate-400 hover:bg-slate-500 shadow-[0_8px_0_rgb(71,85,105)] text-white',
+                'bg-amber-600 hover:bg-amber-700 shadow-[0_8px_0_rgb(146,64,14)] text-white',
+                'bg-blue-200 hover:bg-blue-300 shadow-[0_8px_0_rgb(96,165,250)] text-slate-800',
+                'bg-blue-200 hover:bg-blue-300 shadow-[0_8px_0_rgb(96,165,250)] text-slate-800',
+                'bg-blue-200 hover:bg-blue-300 shadow-[0_8px_0_rgb(96,165,250)] text-slate-800'
+            ];
+            const placementIcons = [
+                '<i class="fas fa-trophy mr-2 text-yellow-200"></i> ',
+                '<i class="fas fa-medal mr-2 text-slate-200"></i> ',
+                '<i class="fas fa-medal mr-2 text-amber-300"></i> ',
+                '', '', ''
+            ];
+
+            for (let i = 0; i < teams.length; i++) {
+                const btn = document.createElement('button');
+                btn.className = `px-8 py-4 font-extrabold text-3xl rounded-2xl hover:translate-y-1 transition-all ${buttonStyles[i]}`;
+                btn.innerHTML = `${placementIcons[i]}${placementLabels[i]}`;
+                
+                const currentLabel = placementLabels[i];
+                btn.onclick = () => openRoulette(currentLabel);
+                container.appendChild(btn);
+            }
+        }
+
+        function startGame(mode) {
+            gameMode = mode;
+            currentRound = 1;
+            currentSet = 1;
+            
+            teams = MASTER_TEAMS.slice(0, activeTeamCount);
+            
+            resetScores();
+            setupRaceTracks();
+            setupPlacementButtons();
+            
+            if (gameMode === 'easy') {
+                document.getElementById('placement-buttons').style.display = 'none';
+            } else {
+                document.getElementById('placement-buttons').style.display = 'flex';
+            }
+            
+            shuffledQuestions = [...PICTURE_ACTIVITY_POOL].sort(() => 0.5 - Math.random());
+            currentQuestionIndex = 0;
+            
+            prepareRound();
+        }
+
+        function resetScores() {
+            teams.forEach(t => t.score = 0);
+        }
+
+        function resetGame() {
+            document.getElementById('winner-modal').classList.add('hidden');
+            document.getElementById('ranking-modal').classList.add('hidden');
+            showScreen('home-screen');
+        }
+
+        function endGame() {
+            const sortedTeams = [...teams].sort((a, b) => b.score - a.score);
+            const container = document.getElementById('ranking-container');
+            container.innerHTML = '';
+
+            const medals = [
+                '<i class="fas fa-trophy text-yellow-500 text-6xl drop-shadow-md"></i>', 
+                '<i class="fas fa-medal text-slate-400 text-5xl drop-shadow-md"></i>',   
+                '<i class="fas fa-medal text-amber-700 text-5xl drop-shadow-md"></i>',   
+                '<span class="text-slate-600 text-4xl font-black">4TH</span>',             
+                '<span class="text-slate-600 text-4xl font-black">5TH</span>',
+                '<span class="text-slate-600 text-4xl font-black">6TH</span>'              
+            ];
+
+            const bgColors = [
+                'bg-yellow-50 border-yellow-400',
+                'bg-slate-50 border-slate-400',
+                'bg-amber-50 border-amber-600',
+                'bg-white border-blue-200',
+                'bg-white border-blue-200',
+                'bg-white border-blue-200'
+            ];
+
+            sortedTeams.forEach((team, index) => {
+                const row = document.createElement('div');
+                row.className = `flex items-center justify-between px-8 py-4 rounded-3xl border-[6px] ${bgColors[index]} shadow-lg text-3xl font-extrabold animate-pop`;
+                row.style.animationDelay = `${index * 0.1}s`;
+                
+                row.innerHTML = `
+                    <div class="flex items-center gap-6 w-1/3">
+                        <div class="w-20 text-center">${medals[index]}</div>
+                        <span style="color: ${team.color}" class="drop-shadow-sm text-[2.5rem] uppercase tracking-wide">${team.name}</span>
+                    </div>
+                    <div class="w-1/3 flex justify-center">
+                        <div class="h-20 w-24 relative flex justify-center items-end">
+                             <img src="${team.img}" class="max-h-full w-auto object-contain drop-shadow-xl" onerror="this.style.display='none'">
+                        </div>
+                    </div>
+                    <div class="w-1/3 text-right text-slate-700 text-4xl">
+                        ${team.score} <span class="text-2xl text-slate-500 uppercase tracking-wider">steps</span>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+
+            document.getElementById('ranking-modal').classList.remove('hidden');
+        }
+
+        function advanceChallenge() {
+            if (currentSet < 5) {
+                currentSet++;
+            } else {
+                if (currentRound < 6) {
+                    currentRound++;
+                    currentSet = 1;
+                } else {
+                    currentSet = 5; 
+                }
+            }
+            prepareRound();
+        }
+
+        function prepareRound() {
+            document.getElementById('round-counter').innerText = currentRound;
+            document.getElementById('set-counter').innerText = currentSet;
+            
+            const nextBtn = document.getElementById('next-set-btn');
+            if (currentSet < 5) {
+                nextBtn.innerHTML = `Next Set <i class="fas fa-arrow-right ml-3 text-3xl"></i>`;
+            } else {
+                nextBtn.innerHTML = `Next Round <i class="fas fa-forward ml-3 text-3xl"></i>`;
+            }
+            
+            if (currentQuestionIndex >= shuffledQuestions.length) {
+                shuffledQuestions = [...PICTURE_ACTIVITY_POOL].sort(() => 0.5 - Math.random());
+                currentQuestionIndex = 0;
+            }
+
+            const currentQuestion = shuffledQuestions[currentQuestionIndex];
+            currentQuestionIndex++;
+
+            const container = document.getElementById('letters-container');
+            container.innerHTML = '';
+
+            const frameLayout = document.createElement('div');
+            frameLayout.className = 'flex flex-col items-center justify-center gap-6 w-full max-w-4xl h-full py-2';
+
+            const imageEl = document.createElement('img');
+            imageEl.src = currentQuestion.img;
+            imageEl.className = 'max-h-[42vh] w-auto object-contain rounded-3xl shadow-2xl border-8 border-white bg-white animate-pop';
+            imageEl.onerror = function() {
+                this.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50" fill="%23ccc"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="8">Image Missing</text></svg>';
+            };
+
+            const choicesMatrix = document.createElement('div');
+            choicesMatrix.className = 'grid grid-cols-2 gap-6 w-full px-4';
+
+            // Choices defined in lowercase letters
+            const optionsList = ["wear sachets", "eat rice dumplings", "stand an egg", "watch a race"];
+            optionsList.forEach(choiceText => {
+                const choiceBtn = document.createElement('button');
+                // Removed the 'uppercase' class to allow lowercase rendering
+                choiceBtn.className = 'py-6 px-4 font-extrabold text-3xl md:text-4xl rounded-2xl text-slate-800 bg-white hover:bg-slate-100 border-4 border-blue-400 shadow-[0_8px_0_rgba(96,165,250,1)] hover:shadow-[0_4px_0_rgba(96,165,250,1)] hover:translate-y-1 transition-all tracking-wide';
+                choiceBtn.innerText = choiceText;
+                
+                choiceBtn.onclick = () => {
+                    if (choiceText === currentQuestion.ans) {
+                        goToRace();
+                    } else {
+                        choiceBtn.classList.add('border-red-400', 'bg-red-50');
+                        setTimeout(() => {
+                            choiceBtn.classList.remove('border-red-400', 'bg-red-50');
+                        }, 1000);
+                    }
+                };
+                choicesMatrix.appendChild(choiceBtn);
+            });
+
+            frameLayout.appendChild(imageEl);
+            frameLayout.appendChild(choicesMatrix);
+            container.appendChild(frameLayout);
+
+            showScreen('letters-screen');
+        }
+
+        function goToRace() {
+            showScreen('race-screen');
+        }
+
+        function setupRaceTracks() {
+            const container = document.getElementById('tracks-container');
+            container.innerHTML = '';
+
+            const adjustedTrackHeight = Math.floor(100 / teams.length) - 2;
+
+            teams.forEach((team, index) => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center w-full relative bg-white/40 backdrop-blur-sm rounded-r-[2rem] rounded-l-2xl border-y-2 border-white/60 shadow-md z-10';
+                row.style.height = `${adjustedTrackHeight}%`;
+                
+                const labelArea = document.createElement('div');
+                labelArea.className = 'w-40 md:w-56 flex flex-col items-center justify-center shrink-0 h-full rounded-l-2xl text-white font-extrabold text-2xl md:text-3xl z-30 shadow-lg border-r-4 border-black/20';
+                labelArea.style.backgroundColor = team.color;
+                
+                labelArea.innerHTML = `
+                    <span class="drop-shadow-lg tracking-wide">${team.name}</span>
+                    <span class="text-xl md:text-2xl bg-black/30 px-4 py-1 rounded-full mt-2 border-2 border-white/40 shadow-inner">
+                        <span id="score-${index}">${team.score}</span> / ${MAX_STEPS}
+                    </span>
+                `;
+
+                const trackPath = document.createElement('div');
+                trackPath.className = 'flex-1 relative h-full flex items-center overflow-visible border-r-[12px] border-dashed z-20';
+                trackPath.style.borderRightColor = '#1f2937'; 
+                
+                const fallbackSVG = encodeURIComponent(`
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50">
+                        <path d="M5 25 Q 50 45 95 25 L 85 10 L 15 10 Z" fill="${team.color}" stroke="#fff" stroke-width="3"/>
+                        <circle cx="25" cy="20" r="6" fill="#fff"/>
+                        <circle cx="50" cy="20" r="6" fill="#fff"/>
+                        <circle cx="75" cy="20" r="6" fill="#fff"/>
+                    </svg>
+                `);
+
+                const boat = document.createElement('div');
+                boat.id = `boat-${index}`;
+                boat.className = 'boat-container absolute h-full flex items-center justify-center z-40';
+                
+                if (gameMode === 'easy') {
+                    boat.classList.add('cursor-pointer', 'active:scale-95');
+                    boat.title = "Click to move this team forward!";
+                    boat.onclick = () => {
+                        if (team.score < MAX_STEPS) {
+                            team.score += 1;
+                            updateBoatPosition(index);
+                            if (team.score >= MAX_STEPS) {
+                                setTimeout(() => showWinner(team), 600);
+                            }
+                        }
+                    };
+                }
+                
+                boat.style.width = '150px'; 
+                boat.style.left = '0%';
+                
+                boat.innerHTML = `
+                    <img src="${team.img}" alt="${team.name}" class="w-full h-auto drop-shadow-2xl z-40 relative object-contain" 
+                         style="transform: scale(1.6) translateY(-10%); transform-origin: bottom;"
+                         onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,${fallbackSVG}';">
+                `;
+
+                const ticks = document.createElement('div');
+                ticks.className = 'absolute inset-0 flex justify-between px-12 opacity-40 pointer-events-none z-10';
+                for(let i=0; i<MAX_STEPS; i++) {
+                    ticks.innerHTML += `<div class="w-[2px] h-full bg-white drop-shadow-sm"></div>`;
+                }
+
+                trackPath.appendChild(ticks);
+                trackPath.appendChild(boat);
+                row.appendChild(labelArea);
+                row.appendChild(trackPath);
+                container.appendChild(row);
+            });
+            updateAllBoatPositions();
+        }
+
+        function updateBoatPosition(teamIndex) {
+            const team = teams[teamIndex];
+            const boat = document.getElementById(`boat-${teamIndex}`);
+            const scoreDisplay = document.getElementById(`score-${teamIndex}`);
+            
+            scoreDisplay.innerText = team.score;
+            
+            const percentage = (team.score / MAX_STEPS) * 100;
+            boat.style.left = `calc(${percentage}% - (${percentage} * 150px / 100))`;
+        }
+
+        function updateAllBoatPositions() {
+            teams.forEach((_, i) => updateBoatPosition(i));
+        }
+
+        async function moveBoatSequence(teamIndex, steps) {
+            const team = teams[teamIndex];
+            const increment = steps > 0 ? 1 : -1;
+            const absSteps = Math.abs(steps);
+
+            for (let i = 0; i < absSteps; i++) {
+                if (increment === 1 && team.score >= MAX_STEPS) break;
+                if (increment === -1 && team.score <= 0) break;
+
+                team.score += increment;
+                updateBoatPosition(teamIndex);
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            if (team.score >= MAX_STEPS) {
+                setTimeout(() => showWinner(team), 600);
+            }
+        }
+
+        function showWinner(team) {
+            const modal = document.getElementById('winner-modal');
+            const text = document.getElementById('winner-text');
+            text.innerText = `${team.name} WINS!`;
+            text.style.color = team.color;
+            modal.classList.remove('hidden');
+        }
+
+        function openRoulette(placement) {
+            currentRouletteOptions = rouletteRules[placement];
+            
+            document.getElementById('roulette-title').innerText = `${placement} Place Spinner`;
+            document.getElementById('roulette-modal').classList.remove('hidden');
+            
+            document.getElementById('roulette-controls').classList.remove('hidden');
+            document.getElementById('team-selector').classList.add('hidden');
+            
+            const strip = document.getElementById('spinner-strip');
+            strip.style.transition = 'none';
+            strip.style.transform = 'translateY(0)';
+            strip.innerHTML = '';
+            
+            const initialItem = document.createElement('div');
+            initialItem.className = 'spinner-item text-slate-300';
+            initialItem.innerText = '?';
+            strip.appendChild(initialItem);
+        }
+
+        function formatOption(num) {
+            return num > 0 ? `+${num}` : `${num}`;
+        }
+
+        function getColorClass(num) {
+            return num > 0 ? 'text-green-600' : 'text-red-600';
+        }
+
+        function startSpin() {
+            if (isSpinning) return;
+            isSpinning = true;
+            
+            document.getElementById('roulette-controls').classList.add('hidden');
+
+            const strip = document.getElementById('spinner-strip');
+            strip.innerHTML = '';
+            strip.style.transition = 'none';
+            strip.style.transform = 'translateY(0)';
+
+            const spins = 25; 
+            const finalIndex = Math.floor(Math.random() * currentRouletteOptions.length);
+            selectedSpinResult = currentRouletteOptions[finalIndex];
+
+            for(let i=0; i<spins; i++) {
+                const randomOpt = currentRouletteOptions[Math.floor(Math.random() * currentRouletteOptions.length)];
+                const div = document.createElement('div');
+                div.className = `spinner-item ${getColorClass(randomOpt)}`;
+                div.innerText = formatOption(randomOpt);
+                strip.appendChild(div);
+            }
+
+            const finalDiv = document.createElement('div');
+            finalDiv.className = `spinner-item ${getColorClass(selectedSpinResult)} text-7xl`;
+            finalDiv.innerText = formatOption(selectedSpinResult);
+            strip.appendChild(finalDiv);
+
+            void strip.offsetWidth; 
+
+            const itemHeight = 100;
+            const targetY = -(spins * itemHeight);
+            
+            strip.style.transition = 'transform 3s cubic-bezier(0.15, 0.85, 0.35, 1)';
+            strip.style.transform = `translateY(${targetY}px)`;
+
+            setTimeout(() => {
+                isSpinning = false;
+                showTeamSelector();
+            }, 3200);
+        }
+
+        function showTeamSelector() {
+            const selector = document.getElementById('team-selector');
+            selector.innerHTML = `<p class="text-3xl font-extrabold mb-6 text-slate-800">Apply <span class="${getColorClass(selectedSpinResult)} font-black text-5xl mx-2 bg-slate-100 px-4 py-2 rounded-xl shadow-inner">${formatOption(selectedSpinResult)}</span> to which team?</p><div class="flex flex-wrap justify-center gap-5" id="team-btn-container"></div>`;
+            
+            const btnContainer = document.getElementById('team-btn-container');
+            
+            teams.forEach((team, index) => {
+                const btn = document.createElement('button');
+                btn.className = `px-8 py-5 font-extrabold text-2xl text-white rounded-2xl shadow-[0_8px_0_rgba(0,0,0,0.3)] hover:translate-y-1 transition-all hover:shadow-[0_4px_0_rgba(0,0,0,0.3)]`;
+                btn.style.backgroundColor = team.color;
+                btn.innerText = team.name;
+                btn.onclick = () => {
+                    document.getElementById('roulette-modal').classList.add('hidden');
+                    moveBoatSequence(index, selectedSpinResult);
+                };
+                btnContainer.appendChild(btn);
+            });
+
+            selector.classList.remove('hidden');
+        }
+
+        document.getElementById('home-screen').classList.add('active');
+    </script>
+</body>
+</html>
